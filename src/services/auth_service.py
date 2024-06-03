@@ -5,7 +5,7 @@ from data.base_repository import BaseRepository
 from data.models import User
 from services.base_database_service import BaseDatabaseService, Depend
 from services.dtos import LoginResponse, RefreshTokenResponse
-from services.exceptions import LingoException
+from services.exceptions import AppException
 from services.user_service import UserRepository
 
 
@@ -16,7 +16,7 @@ class AuthService(BaseDatabaseService):
 	async def login(self, username: str, password: str):
 		user = await self.user_repository.get_user_by_email(username)
 		if not user or not self._validate_password(password, user.password):
-			raise LingoException("Incorrect username or password")
+			raise AppException("Incorrect username or password")
 		
 		access_token = TokenUtils.create_access_token(user.id)
 		refresh_token = TokenUtils.create_refresh_token(user.id)
@@ -28,7 +28,7 @@ class AuthService(BaseDatabaseService):
 	async def refresh_token(self, user_id: str):
 		admin = await self.user_repository.get_user(user_id)
 		if not admin:
-			raise LingoException(f"Failed to refresh access token")
+			raise AppException(f"Failed to refresh access token")
 
 		access_token = TokenUtils.create_access_token(admin.id)
 		return RefreshTokenResponse(

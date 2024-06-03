@@ -1,11 +1,11 @@
 import traceback
 from fastapi import Depends, FastAPI, HTTPException
-from services.exceptions import LingoException
+from services.exceptions import AppException
 from services.static_data_service import StaticDataService
 
 
 class StaticDataController:
-	def handle_exception(self, e: LingoException):
+	def handle_exception(self, e: AppException):
 		traceback.print_exc()
 		raise HTTPException(status_code=400, detail=str(e))
 	
@@ -17,5 +17,5 @@ class StaticDataController:
 		):
 			try:
 				return await static_data_service.get_test_data()
-			except LingoException as e:
+			except AppException as e:
 				self.handle_exception(e)

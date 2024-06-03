@@ -1,2 +1,2 @@
-class LingoException(Exception):
+class AppException(Exception):
 	pass

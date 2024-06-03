@@ -3,13 +3,13 @@ from typing import Optional
 from fastapi import Depends, FastAPI, HTTPException
 from auth import Token, get_refresh_token, get_token
 from services.dtos import LoginRequest
-from services.exceptions import LingoException
+from services.exceptions import AppException
 from services.auth_service import AuthService
 
 
 
 class AuthController:
-	def handle_exception(self, e: LingoException):
+	def handle_exception(self, e: AppException):
 		traceback.print_exc()
 		raise HTTPException(status_code=400, detail=str(e))
 	
@@ -21,7 +21,7 @@ class AuthController:
 		):
 			try:
 				return await account_service.login(dto.email_address, dto.password)
-			except LingoException as e:
+			except AppException as e:
 				self.handle_exception(e)
 		
 		@app.post("/refresh-token")
@@ -31,5 +31,5 @@ class AuthController:
 		):
 			try:
 				return await account_service.refresh_token(token.sub)
-			except LingoException as e:
+			except AppException as e:
 				self.handle_exception(e)

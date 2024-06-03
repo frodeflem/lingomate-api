@@ -6,6 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 
+class EventBase(BaseModel):
+	type: str
+
 class OrmBaseModel(BaseModel):
 	model_config = ConfigDict(from_attributes=True)
 	

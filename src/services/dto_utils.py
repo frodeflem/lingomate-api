@@ -2,7 +2,7 @@ from typing import Callable, Union
 from pydantic import BaseModel
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
-from services.exceptions import LingoException
+from services.exceptions import AppException
 
 
 def update_changed_attributes(current: InstrumentedAttribute, new: BaseModel, allowed_attributes: list[Union[InstrumentedAttribute, tuple[InstrumentedAttribute, list[InstrumentedAttribute]]]]):
@@ -24,7 +24,7 @@ def update_changed_attributes(current: InstrumentedAttribute, new: BaseModel, al
 
 			# # The nested attributes should be lists of attributes
 			if not isinstance(nested_allowed_attributes, list):
-				raise LingoException(f"Nested allowed attributes must be a list of attributes, which {key} doesn't have.")
+				raise AppException(f"Nested allowed attributes must be a list of attributes, which {key} doesn't have.")
 
 			if nested_new is None:
 				setattr(current, key, None)
@@ -62,7 +62,7 @@ def update_relation_list(
 
 	
 	if not hasattr(current, "id"):
-		raise LingoException(f"update_relation_list can only be used with models that have an 'id' field.")
+		raise AppException(f"update_relation_list can only be used with models that have an 'id' field.")
 	
 	new_ids_set = set(new_ids)
 	relations: list = getattr(current, relation_field.key)

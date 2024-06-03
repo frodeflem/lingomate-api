@@ -7,7 +7,7 @@ import jwt
 from pydantic import BaseModel
 
 from services.dtos import RefreshTokenDto
-from services.exceptions import LingoException
+from services.exceptions import AppException
 
 
 
@@ -34,7 +34,7 @@ class TokenUtils:
 	def create_access_token(user_id: str):
 		payload = {
 			"sub": user_id,
-			"exp": round((datetime.now() + timedelta(hours=2)).timestamp(), 0),
+			"exp": round((datetime.now() + timedelta(seconds=5)).timestamp(), 0),
 		}
 		token = jwt.encode(payload, key=TokenUtils.key(), algorithm=TokenUtils.algorithm)
 		return token
@@ -43,7 +43,7 @@ class TokenUtils:
 	def create_refresh_token(user_id: str):
 		payload = {
 			"sub": user_id,
-			"exp": round((datetime.now() + timedelta(days=30)).timestamp(), 0),
+			"exp": round((datetime.now() + timedelta(seconds=10)).timestamp(), 0),
 		}
 		token = jwt.encode(payload, key=TokenUtils.key(), algorithm=TokenUtils.algorithm)
 		return token

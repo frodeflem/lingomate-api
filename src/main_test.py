@@ -6,12 +6,12 @@ from fastapi import Depends, FastAPI, HTTPException
 import httpx
 from auth import TokenUtils
 from main import Main
-from services.exceptions import LingoException
+from services.exceptions import AppException
 
 
 
 class TestController:
-	def handle_exception(self, e: LingoException):
+	def handle_exception(self, e: AppException):
 		traceback.print_exc()
 		raise HTTPException(status_code=400, detail=str(e))
 	

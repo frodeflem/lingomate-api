@@ -4,6 +4,7 @@ import signal
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from api_application import ApiApplication
+from controllers.chat_controller import ChatController
 from controllers.static_data_controller import StaticDataController
 from controllers.auth_controller import AuthController
 from controllers.user_controller import UserController
@@ -41,6 +42,7 @@ class Main:
 		auth_controller = AuthController(app)
 		static_data_controller = StaticDataController(app)
 		user_controller = UserController(app)
+		chat_controller = ChatController(app)
 
 		# Register Ctrl+C signal handler to stop the event loop
 		signal.signal(signal.SIGINT, lambda signum, frame: asyncio.create_task(self.shutdown(signum, frame)))

@@ -5,7 +5,7 @@ from data.base_repository import BaseRepository
 from data.models import User
 from services.base_database_service import BaseDatabaseService, Depend
 from services.dtos import LoginResponse, RefreshTokenResponse, UserDto
-from services.exceptions import LingoException
+from services.exceptions import AppException
 
 
 class UserRepository(BaseRepository):

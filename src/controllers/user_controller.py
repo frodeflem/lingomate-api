@@ -1,13 +1,13 @@
 import traceback
 from fastapi import Depends, FastAPI, HTTPException
 from auth import Token, get_token
-from services.exceptions import LingoException
+from services.exceptions import AppException
 from services.user_service import UserService
 
 
 
 class UserController:
-	def handle_exception(self, e: LingoException):
+	def handle_exception(self, e: AppException):
 		traceback.print_exc()
 		raise HTTPException(status_code=400, detail=str(e))
 	
@@ -19,5 +19,5 @@ class UserController:
 		):
 			try:
 				return await user_service.get_user(token.sub)
-			except LingoException as e:
+			except AppException as e:
 				self.handle_exception(e)
