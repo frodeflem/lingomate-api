@@ -144,7 +144,6 @@ class TokenUtils:
 
 	@staticmethod
 	def validate_bearer_token(websocket: WebSocket, _ = Depends(websocket_headers)):
-		print(f"headers: {websocket.headers}")
 		authorization_header = websocket.headers.get("authorization")
 		if authorization_header is None:
 			raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
