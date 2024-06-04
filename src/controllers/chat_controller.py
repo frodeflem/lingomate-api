@@ -1,9 +1,8 @@
 import traceback
 from fastapi import Depends, FastAPI, HTTPException, WebSocket
-from auth import Token, get_token
+from auth import Token, get_token, get_ws_token
 from services.exceptions import AppException
 from services.chat_service import ChatService
-from utils.websocket_auth import get_ws_token
 
 
 

@@ -1,4 +1,5 @@
 import asyncio
+import enum
 from functools import partial
 import json
 import traceback
@@ -16,12 +17,17 @@ from services.exceptions import AppException
 class WebsocketDataBase(EventBase):
 	pass
 
+class DataMode(enum.IntEnum):
+	Text = 0
+	Binary = 1
+
 
 class BaseWebsocketWorker:
-	def __init__(self, data_models: list[WebsocketDataBase] = []):
-		self.should_exit = False
-		self.websocket = None
+	def __init__(self, data_models: list[WebsocketDataBase] = [], data_mode=DataMode.Text):
 		self.data_models: dict[str, WebsocketDataBase] = {model.model_fields["type"].default: model for model in data_models}
+		self.data_mode = data_mode
+		self.websocket = None
+		self.should_exit = False
 		self.queue = Queue()
 		self.queue_task = None
 
@@ -34,14 +40,49 @@ class BaseWebsocketWorker:
 			coro_func = await self.queue.get()
 			await coro_func()
 			self.queue.task_done()
+	
+	async def process_json_message(self, text: str):
+		try:
+			json_data = json.loads(text)
+
+			if "type" not in json_data:
+				raise AppException(f"No type field in message: {json_data}")
+			
+			model = self.data_models.get(json_data["type"], None)
+			if model is None:
+				raise AppException(f"Invalid data model in message: {json_data}")
+
+			data = model(**json_data)
+			task_creator = partial(self.on_json_data, data)
+			self.queue.put_nowait(task_creator)
+		
+		# Handle pydantic validation errors
+		except (json.JSONDecodeError, AppException) as e:
+			traceback.print_exc()
+			error_resp = {
+				"message": f"{e.__class__.__name__}: {e}",
+				"type": "error"
+			}
+			await self.websocket.send_json(error_resp)
+	
+	async def process_binary_message(self, data: bytes):
+		task_creator = partial(self.on_binary_data, data)
+		self.queue.put_nowait(task_creator)
 
 	async def begin(self, websocket: WebSocket):
 		self.websocket = websocket
 		self.should_exit = False
-
+			
 		if websocket.application_state == WebSocketState.DISCONNECTED:
 			# This usually means the connection was closed before the handshake was completed
 			return
+
+		if self.data_mode == DataMode.Text:
+			receive_func = websocket.receive_text
+			process_func = self.process_json_message
+		else:
+			receive_func = websocket.receive_bytes
+			process_func = self.process_binary_message
 		
 		await websocket.accept()
 
@@ -50,30 +91,16 @@ class BaseWebsocketWorker:
 			self.queue_task = asyncio.create_task(self.process_queue())
 			
 			while not self.should_exit:
-				text = await websocket.receive_text()
-
-				try:
-					json_data = json.loads(text)
-
-					if "type" not in json_data:
-						raise AppException(f"No type field in message: {json_data}")
-					
-					model = self.data_models.get(json_data["type"], None)
-					if model is None:
-						raise AppException(f"Invalid data model in message: {json_data}")
-
-					data = model(**json_data)
-					task_creator = partial(self.on_data, data)
+				data = await websocket.receive()
+				text = data.get("text", None)
+				if text is not None:
+					task_creator = partial(self.process_json_message, text)
 					self.queue.put_nowait(task_creator)
-				
-				# Handle pydantic validation errors
-				except (json.JSONDecodeError, AppException) as e:
-					traceback.print_exc()
-					error_resp = {
-						"message": f"{e.__class__.__name__}: {e}",
-						"type": "error"
-					}
-					await websocket.send_json(error_resp)
+				else:
+					binary = data.get("bytes", None)
+					if binary is not None:
+						task_creator = partial(self.process_binary_message, binary)
+						self.queue.put_nowait(task_creator)
 		
 		except WebSocketDisconnect as e:
 			pass
@@ -110,6 +137,32 @@ class BaseWebsocketWorker:
 			return True
 		else:
 			return False
+	
+	async def send_json(self, data: BaseModel):
+		# Verify that the data type inherits from BaseModel:
+		if not issubclass(type(data), BaseModel):
+			raise AppException(f"Data type {type(data)} does not inherit from BaseModel")
+		
+		if self.websocket and self.websocket.application_state == WebSocketState.CONNECTED:
+			try:
+				await self.websocket.send_text(json.dumps(data.model_dump()))
+			except ConnectionClosedOK as e:
+				pass
+
+			return True
+		else:
+			return False
+	
+	async def send_binary(self, data: bytes):
+		if self.websocket and self.websocket.application_state == WebSocketState.CONNECTED:
+			try:
+				await self.websocket.send_bytes(data)
+			except ConnectionClosedOK as e:
+				pass
+
+			return True
+		else:
+			return False
 		
 	def add_data_models_in(self, models: dict[str, BaseModel]):
 		self.data_models.update(models)
@@ -120,7 +173,10 @@ class BaseWebsocketWorker:
 	async def on_disconnected(self):
 		pass
 
-	async def on_data(self, data: WebsocketDataBase):
+	async def on_json_data(self, data: WebsocketDataBase):
+		pass
+
+	async def on_binary_data(self, data: bytes):
 		pass
 
 
